@@ -1,0 +1,44 @@
+# General OS files
+.DS_Store
+Thumbs.db
+
+# Log & temp files
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# Build / distribution artefacts
+/build/
+/dist/
+/output/
+*.zip
+*.tar.gz
+*.tgz
+
+# Docker‑specific cache / intermediate files
+/.docker/
+
+# Environment / secrets
+.env
+.env.*
+*.env
+
+# Node.js / npm (if any)
+node_modules/
+npm-debug.log
+
+# Python / pip (if any)
+__pycache__/
+*.pyc
+
+# IDE / editor configs
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# Misc
+*.pid
+*.lock
