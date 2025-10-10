@@ -164,27 +164,27 @@ ini_file_set() {
         case "$1" in
             set)
                 shift
-                ;;
+            ;;
             --section)
                 section="$2"
                 shift 2
-                ;;
+            ;;
             --key)
                 key="$2"
                 shift 2
-                ;;
+            ;;
             --value)
                 value="$2"
                 shift 2
-                ;;
+            ;;
             --ignore-inline-comments)
                 ignore_comments="yes"
                 shift
-                ;;
+            ;;
             *)
                 file="$1"
                 shift
-                ;;
+            ;;
         esac
     done
 
