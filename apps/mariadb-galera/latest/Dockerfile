@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libboost-dev libboost-program-options-dev \
     libreadline-dev zlib1g-dev libjemalloc-dev \
     libpcre2-dev liblz4-dev libzstd-dev libsnappy-dev \
-    check libboost-all-dev \
+    check libboost-all-dev libpam0g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
@@ -33,21 +33,23 @@ RUN git clone --depth 1 --branch mariadb-${MARIADB_VERSION} \
     && cd mariadb \
     && mkdir build && cd build \
     && cmake .. \
-       -DCMAKE_BUILD_TYPE=Release \
-       -DCMAKE_INSTALL_PREFIX=/opt/nullata/mariadb \
-       -DWITH_WSREP=ON \
-       -DWITH_INNODB_DISALLOW_WRITES=ON \
-       -DWITH_EMBEDDED_SERVER=OFF \
-       -DWITH_UNIT_TESTS=OFF \
-       -DWITH_SSL=system \
-       -DWITH_ZLIB=system \
-       -DWITH_JEMALLOC=yes \
-       -DDEFAULT_CHARSET=utf8mb4 \
-       -DDEFAULT_COLLATION=utf8mb4_general_ci \
-       -DENABLED_LOCAL_INFILE=ON \
-       -DINSTALL_MYSQLTESTDIR= \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/opt/nullata/mariadb \
+        -DWITH_WSREP=ON \
+        -DWITH_INNODB_DISALLOW_WRITES=ON \
+        -DWITH_EMBEDDED_SERVER=OFF \
+        -DWITH_UNIT_TESTS=OFF \
+        -DWITH_SSL=system \
+        -DWITH_ZLIB=system \
+        -DWITH_JEMALLOC=yes \
+        -DDEFAULT_CHARSET=utf8mb4 \
+        -DDEFAULT_COLLATION=utf8mb4_general_ci \
+        -DENABLED_LOCAL_INFILE=ON \
+        -DINSTALL_MYSQLTESTDIR= \
+        -DPLUGIN_AUTH_PAM=YES \
     && make -j$(nproc) \
-    && make install
+    && make install \
+    && ln -sf /opt/nullata/mariadb/scripts/mariadb-install-db /opt/nullata/mariadb/bin/mariadb-install-db
 
 # Strip binaries
 RUN find /opt/nullata/mariadb -type f -executable -exec strip --strip-unneeded {} \; 2>/dev/null || true
@@ -79,6 +81,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libncurses6 libpam-ldapd libpam0g libssl3 libstdc++6 libtinfo6 \
     libxml2 nslcd procps psmisc rsync socat zlib1g \
     libjemalloc2 liblz4-1 libzstd1 libsnappy1v5 libboost-program-options1.74.0 \
+    libnuma1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy compiled binaries
@@ -88,11 +91,17 @@ COPY --from=builder /opt/nullata /opt/nullata
 COPY prebuildfs /
 COPY rootfs /
 
+SHELL ["/bin/bash", "-c"]
+
 # Create directory structure
 RUN mkdir -p \
-    /opt/nullata/mariadb/{conf,conf.default,logs,tmp} \
+    /opt/nullata/mariadb/conf \
+    /opt/nullata/mariadb/conf.default \
+    /opt/nullata/mariadb/logs \
+    /opt/nullata/mariadb/tmp \
     /opt/nullata/mariadb/conf/nullata \
-    /nullata/mariadb/{data,.bootstrap} \
+    /nullata/mariadb/data \
+    /nullata/mariadb/.bootstrap \
     /docker-entrypoint-initdb.d \
     && chmod -R g+rwX /opt/nullata
 
@@ -104,7 +113,7 @@ RUN find / -perm /6000 -type f -exec chmod a-s {} \; 2>/dev/null || true
 
 ENV APP_VERSION="${MARIADB_VERSION}" \
     NULLATA_APP_NAME="mariadb-galera" \
-    PATH="/opt/nullata/mariadb/bin:/opt/nullata/mariadb/sbin:/opt/nullata/common/bin:${PATH}"
+    PATH="/opt/nullata/mariadb/bin:/opt/nullata/common/bin:${PATH}"
 
 EXPOSE 3306 4444 4567 4568
 
