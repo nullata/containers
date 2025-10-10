@@ -22,7 +22,7 @@ set -o pipefail
 eval "$(ldap_env)"
 
 # mysqld_safe does not allow logging to stdout/stderr, so we stick with mysqld
-EXEC="${DB_SBIN_DIR}/mysqld"
+EXEC="${DB_BIN_DIR}/mysqld"
 
 flags=("--defaults-file=${DB_CONF_DIR}/my.cnf" "--basedir=${DB_BASE_DIR}" "--datadir=${DB_DATA_DIR}" "--socket=${DB_SOCKET_FILE}")
 [[ -z "${DB_PID_FILE:-}" ]] || flags+=("--pid-file=${DB_PID_FILE}")
@@ -44,6 +44,7 @@ info "** Starting MariaDB **"
 
 set_previous_boot
 
+info "Running mariadbd as user ${DB_DAEMON_USER}"
 if am_i_root; then
     exec_as_user "$DB_DAEMON_USER" "$EXEC" "${flags[@]}"
 else
