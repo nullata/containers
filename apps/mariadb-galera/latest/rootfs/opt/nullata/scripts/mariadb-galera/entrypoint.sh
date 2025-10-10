@@ -10,12 +10,12 @@ set -o nounset
 set -o pipefail
 # set -o xtrace # Uncomment this line for debugging purposes
 
+# Load MariaDB environment variables
+. /opt/nullata/scripts/mariadb-env.sh
+
 # Load libraries
 . /opt/nullata/scripts/libnullata.sh
 . /opt/nullata/scripts/libmariadbgalera.sh
-
-# Load MariaDB environment variables
-. /opt/nullata/scripts/mariadb-env.sh
 
 # We add the copy from default config in the entrypoint to not break users
 # bypassing the setup.sh logic. If the file already exists do not overwrite (in
