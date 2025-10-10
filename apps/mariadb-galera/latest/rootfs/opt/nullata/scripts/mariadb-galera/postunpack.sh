@@ -39,7 +39,7 @@ ldap_create_pam_config "mariadb"
 ln -sf "$DB_BASE_DIR/plugin" "$DB_BASE_DIR/lib/plugin"
 
 # Redirect all logging to stdout
-ln -sf /dev/stdout "$DB_LOGS_DIR/mysqld.log"
+ln -sf /dev/stdout "$DB_LOGS_DIR/mariadbd.log"
 
 # Copy all initially generated configuration files to the default directory
 # (this is to avoid breaking when entrypoint is being overridden)
