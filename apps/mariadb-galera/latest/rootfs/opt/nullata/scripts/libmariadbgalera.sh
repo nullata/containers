@@ -154,7 +154,7 @@ socket=${DB_SOCKET_FILE}
 pid_file=${DB_PID_FILE}
 max_allowed_packet=16M
 bind_address=${DB_DEFAULT_BIND_ADDRESS}
-log_error=${DB_LOGS_DIR}/mysqld.log
+log_error=${DB_LOGS_DIR}/mariadbd.log
 slow_query_log=${DB_ENABLE_SLOW_QUERY}
 long_query_time=${DB_LONG_QUERY_TIME}
 character_set_server=${DB_DEFAULT_CHARACTER_SET}
@@ -476,7 +476,7 @@ mariadb_start_bg() {
     flags+=("$@")
 
     info "Starting MariaDB in background"
-    debug_execute "${DB_SBIN_DIR}/mariadbd" "${flags[@]}" &
+    debug_execute "${DB_BIN_DIR}/mariadbd" "${flags[@]}" &
 
     # we cannot use wait_for_mysql_access here as mariadb_upgrade depends on this command
     # users are not configured on slave nodes during initialization due to --skip-slave-start
@@ -855,9 +855,9 @@ socket=${DB_SOCKET_FILE}
 pid_file=${DB_PID_FILE}
 max_allowed_packet=16M
 bind_address=${DB_DEFAULT_BIND_ADDRESS}
-log_error=${DB_LOGS_DIR}/mysqld.log
+log_error=${DB_LOGS_DIR}/mariadbd.log
 character_set_server=${DB_DEFAULT_CHARACTER_SET}
-plugin_dir=${DB_BASE_DIR}/plugin
+plugin_dir=${DB_PLUGIN_DIR}
 binlog_format=row
 log_bin=mysql-bin
 
@@ -865,7 +865,7 @@ log_bin=mysql-bin
 port=${DB_DEFAULT_PORT_NUMBER}
 socket=${DB_SOCKET_FILE}
 default_character_set=${DB_DEFAULT_CHARACTER_SET}
-plugin_dir=${DB_BASE_DIR}/plugin
+plugin_dir=${DB_PLUGIN_DIR}
 
 [manager]
 port=${DB_DEFAULT_PORT_NUMBER}
@@ -1274,7 +1274,7 @@ mysql_start_bg() {
     is_mysql_running && return
 
     info "Starting $DB_FLAVOR in background"
-    debug_execute "${DB_SBIN_DIR}/mysqld" "${flags[@]}" &
+    debug_execute "${DB_BIN_DIR}/mariadbd" "${flags[@]}" &
 
     # we cannot use wait_for_mysql_access here as mysql_upgrade for MySQL >=8 depends on this command
     # users are not configured on slave nodes during initialization due to --skip-slave-start
@@ -2072,7 +2072,7 @@ mysql_ensure_optional_database_exists() {
 # Arguments:
 #   $1 - MySQL variable name
 #   $2 - Value to assign to the MySQL variable
-#   $3 - Section in the MySQL configuration file the key is located (default: mysqld)
+#   $3 - Section in the MySQL configuration file the key is located (default: mariadbd)
 #   $4 - Configuration file (default: "$BD_CONF_FILE")
 # Returns:
 #   None
@@ -2080,7 +2080,7 @@ mysql_ensure_optional_database_exists() {
 mysql_conf_set() {
     local -r key="${1:?key missing}"
     local -r value="${2:?value missing}"
-    read -r -a sections <<<"${3:-mysqld}"
+    read -r -a sections <<<"${3:-mariadbd}"
     local -r ignore_inline_comments="${4:-no}"
     local -r file="${5:-"$DB_CONF_FILE"}"
     info "Setting ${key} option"
@@ -2115,7 +2115,7 @@ mysql_update_custom_config() {
     fi
 
     ! is_empty_value "$DB_USER" && mysql_conf_set "user" "$DB_USER" "mysqladmin"
-    ! is_empty_value "$DB_PORT_NUMBER" && mysql_conf_set "port" "$DB_PORT_NUMBER" "mysqld client manager"
+    ! is_empty_value "$DB_PORT_NUMBER" && mysql_conf_set "port" "$DB_PORT_NUMBER" "mariadbd client manager"
     ! is_empty_value "$DB_CHARACTER_SET" && mysql_conf_set "character_set_server" "$DB_CHARACTER_SET"
     ! is_empty_value "$DB_COLLATE" && mysql_conf_set "collation_server" "$DB_COLLATE"
     ! is_empty_value "$DB_BIND_ADDRESS" && mysql_conf_set "bind_address" "$DB_BIND_ADDRESS"
