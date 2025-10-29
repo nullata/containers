@@ -1,6 +1,6 @@
 
 
-#  <img src="images/logo.png" alt="Screenshot" width="24"> Nullata Container Build Automation
+#  <img src="images/logo.png" alt="logo" width="24"> Nullata Container Build Automation
 
 A comprehensive framework for building, testing, and maintaining containerized applications with automated version tracking and release management.
 
