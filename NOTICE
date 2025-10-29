@@ -1,0 +1,8 @@
+NOTICE
+
+This repository includes software developed by Bitnami.
+Portions of the container definitions in apps/ are derived from:
+https://github.com/bitnami/containers
+
+Copyright notices from original Bitnami work are preserved in
+the respective files.
