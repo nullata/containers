@@ -1,0 +1,27 @@
+{
+  "app_name": "mariadb-galera",
+  "components": [
+    {
+      "name": "mariadb",
+      "primary": true,
+      "latest_version": "12.0.2",
+      "version_source": {
+        "type": "github_latest_release",
+        "url": "https://api.github.com/repos/MariaDB/server/releases/latest",
+        "field": "tag_name",
+        "pattern": "mariadb-([0-9.]+)"
+      }
+    },
+    {
+      "name": "galera",
+      "primary": false,
+      "latest_version": "26.4.24",
+      "version_source": {
+        "type": "github_tags",
+        "url": "https://api.github.com/repositories/18951393/tags",
+        "field": "name",
+        "pattern": "release_([0-9.]+)"
+      }
+    }
+  ]
+}
