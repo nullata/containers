@@ -11,7 +11,7 @@ services:
         profiles: ["test-single"]
         image: nullata/mariadb-galera:${VERSION}
         ports:
-            - "9912:3306"
+            - "10912:3306" # example testing external port
         volumes:
             - "${NULLATA_TEST_BUILD_DIR}/nullata-galera-test:/nullata/mariadb"
         environment:
@@ -37,7 +37,7 @@ services:
         profiles: ["test-cluster"]
         image: nullata/mariadb-galera:${VERSION}
         ports:
-            - "9913:3306"
+            - "10913:3306" # example testing external port
         volumes:
             - "${NULLATA_TEST_BUILD_DIR}/nullata-galera-test-node1:/nullata/mariadb"
             - "${NULLATA_TEST_BUILD_DIR}/backup/nullata-galera-test:/backup"
@@ -57,7 +57,7 @@ services:
         profiles: ["test-cluster"]
         image: nullata/mariadb-galera:${VERSION}
         ports:
-            - "9914:3306"
+            - "10914:3306" # example testing external port
         volumes:
             - "${NULLATA_TEST_BUILD_DIR}/nullata-galera-test-node2:/nullata/mariadb"
         environment:
@@ -76,7 +76,7 @@ services:
         profiles: ["test-cluster"]
         image: nullata/mariadb-galera:${VERSION}
         ports:
-            - "9915:3306"
+            - "10915:3306" # example testing external port
         volumes:
             - "${NULLATA_TEST_BUILD_DIR}/nullata-galera-test-node3:/nullata/mariadb"
         environment:
@@ -98,7 +98,7 @@ services:
         profiles: ["test-seed"]
         image: nullata/mariadb-galera:${VERSION}
         ports:
-          - "9916:3306"
+          - "10916:3306" # example testing external port
         volumes:
             - "${NULLATA_TEST_BUILD_DIR}/nullata-galera-test-seed0:/nullata/mariadb"
             - "${NULLATA_TEST_BUILD_DIR}/backup/nullata-galera-test:/backup"
@@ -118,7 +118,7 @@ services:
         profiles: ["test-seed"]
         image: nullata/mariadb-galera:${VERSION}
         ports:
-            - "9917:3306"
+            - "10917:3306" # example testing external port
         volumes:
             - "${NULLATA_TEST_BUILD_DIR}/nullata-galera-test-join1:/nullata/mariadb"
         environment:
