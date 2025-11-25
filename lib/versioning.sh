@@ -301,3 +301,139 @@ function updateMasterVersionFile {
     logMessage "Master VERSION file updated"
 }
 
+function createHardenedBuild {
+    local standardBuildDir="$1"
+    local appDir=$(dirname "${standardBuildDir}")
+    local standardVersion=$(basename "${standardBuildDir}")
+
+    logMessage "Attempting to creating a hardened variant for ${standardVersion}"
+
+    # Find most recent hardened build to use as template
+    local latestHardened=$(find "${appDir}" -maxdepth 1 -type d \
+        -regex ".*-${NULLATA_HARDENED_SUFFIX}" | sort -V | tail -n1)
+
+    if [[ -z "${latestHardened}" ]]; then
+        logWarning "No previous hardened build found for ${appDir}"
+        logWarning "Skipping hardened build creation. Create initial hardened build manually."
+        return 0
+    fi
+
+    logMessage "Using template from: ${latestHardened}"
+
+    local hardenedVersion="${standardVersion}-${NULLATA_HARDENED_SUFFIX}"
+    local hardenedBuildDir="${appDir}/${hardenedVersion}"
+
+    if [[ -d "${hardenedBuildDir}" ]]; then
+        logWarning "Hardened build directory already exists: ${hardenedBuildDir}"
+        return 1
+    fi
+
+    logMessage "Creating hardened build directory: ${hardenedBuildDir}"
+    mkdir -p "${hardenedBuildDir}"
+
+    logMessage "Copying hardened contents into: ${hardenedBuildDir}"
+    cp -R "${latestHardened}"/* "${hardenedBuildDir}/"
+
+    logMessage "Adding execution rights to setup script"
+    chmod +x "${hardenedBuildDir}/setup.sh"
+
+    # update Dockerfile ARG versions to match standard build
+    logMessage "  Updating Dockerfile ARG versions..."
+    local dockerfile="${hardenedBuildDir}/Dockerfile"
+
+    # get master VERSION file to extract component versions
+    local masterVersionFile="${appDir}/VERSION"
+    local components=$(jq -c '.components[]' "${masterVersionFile}")
+
+    while IFS= read -r component; do
+        local name=$(echo "${component}" | jq -r '.name')
+        local latestVersion=$(echo "${component}" | jq -r '.latest_version')
+
+        # convert component name to uppercase for ARG name
+        local argName=$(echo "${name}" | tr '[:lower:]' '[:upper:]')_VERSION
+
+        # update ARG line in Dockerfile
+        if grep -q "ARG ${argName}=" "${dockerfile}"; then
+            sed -i "s/ARG ${argName}=.*/ARG ${argName}=${latestVersion}/" "${dockerfile}"
+            logMessage "  Updated ${argName}=${latestVersion}"
+        else
+            logWarning "  ARG ${argName} not found in Dockerfile"
+        fi
+    done <<< "${components}"
+
+    # update VERSION file for new hardened build
+    logMessage "Updating VERSION file..."
+    local versionFile="${hardenedBuildDir}/VERSION"
+    local today=$(date +%Y-%m-%d)
+
+    # update build_version to match new standard version
+    updateJsonProperty "build_version" "${standardVersion}" "${versionFile}"
+
+    # update component versions from master VERSION
+    while IFS= read -r component; do
+        local name=$(echo "${component}" | jq -r '.name')
+        local latestVersion=$(echo "${component}" | jq -r '.latest_version')
+
+        # update component version in VERSION file if it exists
+        if jq -e "has(\"${name}\")" "${versionFile}" >/dev/null 2>&1; then
+            updateJsonProperty "${name}" "${latestVersion}" "${versionFile}"
+        fi
+    done <<< "${components}"
+
+    # reset status to untested and update build date
+    updateJsonProperty "status" "untested" "${versionFile}"
+    updateJsonProperty "build_date" "${today}" "${versionFile}"
+
+    logMessage "Hardened build directory created: ${hardenedBuildDir}"
+
+    # -----------
+    # build; test; and push the hardened variant
+    # -----------
+    local composeFile="${hardenedBuildDir}/docker-compose.yml"
+
+    if ! [[ -f "${composeFile}" ]]; then
+        logError "docker-compose.yml not found in hardened build: ${composeFile}"
+    fi
+
+    logMessage "Building hardened variant..."
+    buildContainerImage "${composeFile}"
+
+    if [[ $? -ne 0 ]]; then
+        logError "Failed to build hardened variant"
+    fi
+
+    logMessage "Testing hardened variant..."
+    if testComposeStack "${composeFile}" "${TEST_STACK_TIMEOUT_PD_S:-90}"; then
+        logMessage "Hardened build tests PASSED"
+
+        # push hardened build (version tag only --- no latest)
+        logMessage "Pushing hardened variant..."
+        pushHardenedImage "${composeFile}" "${hardenedVersion}"
+
+        logMessage "Hardened variant complete: ${hardenedVersion}"
+    else
+        updateJsonProperty "status" "failed" "${versionFile}"
+        logError "Hardened build tests FAILED for ${hardenedVersion}"
+    fi
+}
+
+function pushHardenedImage {
+    local composeFile="$1"
+    local hardenedVersion="$2"
+
+    local targetDir=$(dirname "${composeFile}")
+    local image=$(grep "image:" "${composeFile}" | head -1 | awk '{print $2}' | cut -d ":" -f1)
+
+    if [[ -z "${image}" ]]; then
+        logError "Could not extract image name from ${composeFile}"
+    fi
+
+    logMessage "Pushing ${image}:${hardenedVersion}..."
+
+    if ! retryCommand 3 5 "docker push ${image}:${hardenedVersion}"; then
+        logError "Failed to push ${image}:${hardenedVersion}"
+    fi
+
+    logMessage "Successfully pushed ${image}:${hardenedVersion}"
+    logMessage "Note: Hardened builds do not update the 'latest' tag"
+}
