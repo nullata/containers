@@ -36,16 +36,15 @@ for appDir in "${appsBaseDir}"/*; do
             if [[ -n "${latestBuild}" ]] && [[ -f "${latestBuild}/docker-compose.yml" ]]; then
                 logMessage "Testing newly created build: ${latestBuild}"
 
-                if [[ -x ${SCRIPT_DIR}/composer.sh ]];then
-                    ${SCRIPT_DIR}/composer.sh test "${latestBuild}/docker-compose.yml"
+                testComposeStack "${latestBuild}/docker-compose.yml" "${TEST_STACK_TIMEOUT_PD_S:-60}"
 
-                    if [[ $? -eq 0 ]];then
-                        ${SCRIPT_DIR}/composer.sh push "${latestBuild}/docker-compose.yml"
-                    else
-                        logError "There was a problem during the build process for: ${SCRIPT_DIR}/composer.sh test ${latestBuild}/docker-compose.yml"
-                    fi
+                if [[ $? -eq 0 ]];then
+                    pushImage "${latestBuild}/docker-compose.yml"
+
+                    # create hardened build
+                    createHardenedBuild "${latestBuild}"
                 else
-                    logError "Composer script lacking execute permissions"
+                    logError "There was a problem during the build process for: ${SCRIPT_DIR}/composer.sh test ${latestBuild}/docker-compose.yml"
                 fi
             else
                 logError "Could not find docker-compose.yml in latest build directory: ${latestBuild}/docker-compose.yml"
