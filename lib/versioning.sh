@@ -437,3 +437,77 @@ function pushHardenedImage {
     logMessage "Successfully pushed ${image}:${hardenedVersion}"
     logMessage "Note: Hardened builds do not update the 'latest' tag"
 }
+
+function cleanupOldBuilds {
+    local appDir="$1"
+    local maxKeep="${NULLATA_MAX_VERSIONS_KEEP}"
+
+    local appName=$(basename "${appDir}")
+    logMessage "Cleaning up old builds for ${appName} (keeping latest ${maxKeep} of each type)"
+
+    # find all standard version directories (not hardened)
+    local standardBuilds=($(find "${appDir}" -maxdepth 1 -type d \
+        -regex '.*/[0-9]+\.[0-9]+\.[0-9]+\(-[0-9]+\)?' | \
+        grep -v "\-${NULLATA_HARDENED_SUFFIX}" | \
+        sort -V))
+
+    # find all hardened version directories
+    local hardenedBuilds=($(find "${appDir}" -maxdepth 1 -type d \
+        -regex ".*-${NULLATA_HARDENED_SUFFIX}" | \
+        sort -V))
+
+    # cleanup standard builds
+    local buildDir=""
+    if [[ ${#standardBuilds[@]} -gt ${maxKeep} ]]; then
+        local toDelete=$((${#standardBuilds[@]} - ${maxKeep}))
+        logMessage "Found ${#standardBuilds[@]} standard builds, removing oldest ${toDelete}"
+
+        for (( i=0; i<${toDelete}; i++ )); do
+            local buildDir="${standardBuilds[$i]}"
+            local buildVersion=$(basename "${buildDir}")
+            logMessage "  Removing old standard build: ${buildVersion}"
+            if [[ -d ${buildDir} ]];then
+                rm -rf "${buildDir}"
+            else
+                logError "Cannot remove ${buildDir} -- not a directory"
+            fi
+        done
+    else
+        logMessage "Standard builds: ${#standardBuilds[@]}/${maxKeep} - no cleanup needed"
+    fi
+
+    # cleanup hardened builds
+    local buildDir="" 
+    if [[ ${#hardenedBuilds[@]} -gt ${maxKeep} ]]; then
+        local toDelete=$((${#hardenedBuilds[@]} - ${maxKeep}))
+        logMessage "Found ${#hardenedBuilds[@]} hardened builds, removing oldest ${toDelete}"
+
+        for (( i=0; i<${toDelete}; i++ )); do
+            local buildDir="${hardenedBuilds[$i]}"
+            local buildVersion=$(basename "${buildDir}")
+            logMessage "  Removing old hardened build: ${buildVersion}"
+            if [[ -d ${buildDir} ]];then
+                rm -rf "${buildDir}"
+            else
+                logError "Cannot remove ${buildDir} -- not a directory"
+            fi
+        done
+    else
+        logMessage "Hardened builds: ${#hardenedBuilds[@]}/${maxKeep} - no cleanup needed"
+    fi
+}
+
+function cleanupAllApps {
+    local appsBaseDir="${NULLATA_REPO_DIR}/apps"
+
+    logMessage "Starting cleanup for all apps in: ${appsBaseDir}"
+
+    for appDir in "${appsBaseDir}"/*; do
+        if [[ -d "${appDir}" ]] && [[ -f "${appDir}/VERSION" ]]; then
+            cleanupOldBuilds "${appDir}"
+            logBreak
+        fi
+    done
+
+    logMessage "Cleanup complete for all apps"
+}

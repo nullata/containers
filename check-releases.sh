@@ -54,4 +54,8 @@ for appDir in "${appsBaseDir}"/*; do
     fi
 done
 
+logMessage "Running cleanup to maintain version limits..."
+cleanupAllApps
+logBreak
+
 logMessage "Update check complete"
