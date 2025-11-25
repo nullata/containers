@@ -10,6 +10,9 @@ export NULLATA_REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # base directory for test builds
 export NULLATA_TEST_BUILD_DIR="${NULLATA_TEST_BUILD_DIR:-/opt/services/database}"
 
+# hardened build suffix
+export NULLATA_HARDENED_SUFFIX="${NULLATA_HARDENED_SUFFIX:-hardened-experimental}"
+
 # logging
 export NULLATA_LOG_DIR="${NULLATA_LOG_DIR:-/var/log/nullata-builds}"
 
