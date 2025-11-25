@@ -13,6 +13,8 @@ export NULLATA_TEST_BUILD_DIR="${NULLATA_TEST_BUILD_DIR:-/opt/services/database}
 # hardened build suffix
 export NULLATA_HARDENED_SUFFIX="${NULLATA_HARDENED_SUFFIX:-hardened-experimental}"
 
+export NULLATA_MAX_VERSIONS_KEEP="${NULLATA_MAX_VERSIONS_KEEP:-10}"
+
 # logging
 export NULLATA_LOG_DIR="${NULLATA_LOG_DIR:-/var/log/nullata-builds}"
 
