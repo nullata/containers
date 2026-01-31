@@ -1,8 +1,16 @@
 NOTICE
 
-This repository includes software developed by Bitnami.
-Portions of the container definitions in apps/ are derived from:
+NullSCA Container Build Automation
+Copyright (c) 2025 NullSCA (nullata)
+
+This product includes software developed by Bitnami (Broadcom, Inc.).
+Portions of the container definitions and library scripts in this
+repository are derived from:
 https://github.com/bitnami/containers
 
-Copyright notices from original Bitnami work are preserved in
-the respective files.
+Copyright Broadcom, Inc. All Rights Reserved.
+
+Original copyright and license notices from Bitnami work are preserved
+in the respective source files.
+
+All derivative works are licensed under the Apache License, Version 2.0.
