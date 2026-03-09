@@ -4,7 +4,7 @@
     {
       "name": "mariadb",
       "primary": true,
-      "latest_version": "12.1.2",
+      "latest_version": "12.2.2",
       "version_source": {
         "type": "github_latest_release",
         "url": "https://api.github.com/repos/MariaDB/server/releases/latest",
@@ -15,7 +15,7 @@
     {
       "name": "galera",
       "primary": false,
-      "latest_version": "26.4.24",
+      "latest_version": "26.4.25",
       "version_source": {
         "type": "github_tags",
         "url": "https://api.github.com/repositories/18951393/tags",
