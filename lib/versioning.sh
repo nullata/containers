@@ -278,6 +278,8 @@ function updateNewBuildFiles {
     else
         logWarning "  VERSION file not found: ${versionFile}"
     fi
+
+    updateLicenseYear "${newBuildDir}"
 }
 
 function updateMasterVersionFile {
@@ -311,6 +313,37 @@ function updateMasterVersionFile {
     logMessage "Master VERSION file updated"
 }
 
+function resolvePhaseLabel {
+    local appName="$1"
+    local buildName="$2"
+    local phasesFile="${NULLATA_REPO_DIR}/config/phases.json"
+
+    if ! [[ -f "${phasesFile}" ]]; then
+        echo "${buildName}"
+        return 0
+    fi
+
+    local stripLabels
+    stripLabels=$(jq -r --arg app "${appName}" '.[$app] // [] | .[]' "${phasesFile}" 2>/dev/null)
+
+    if [[ -z "${stripLabels}" ]]; then
+        echo "${buildName}"
+        return 0
+    fi
+
+    local resolved="${buildName}"
+    while IFS= read -r label; do
+        [[ -z "${label}" ]] && continue
+        resolved="${resolved//-${label}/}"
+    done <<< "${stripLabels}"
+
+    if [[ "${resolved}" != "${buildName}" ]]; then
+        logMessage "Phase label resolved: ${buildName} -> ${resolved}"
+    fi
+
+    echo "${resolved}"
+}
+
 function createHardenedBuild {
     local standardBuildDir="$1"
     local appDir=$(dirname "${standardBuildDir}")
@@ -318,9 +351,16 @@ function createHardenedBuild {
 
     logMessage "Attempting to creating a hardened variant for ${standardVersion}"
 
-    # Find most recent hardened build to use as template
+    local appName
+    appName=$(jq -r '.app_name' "${appDir}/VERSION")
+
+    # Resolve what the hardened suffix will be called for this app (may strip phase labels)
+    local resolvedSuffix
+    resolvedSuffix=$(resolvePhaseLabel "${appName}" "${NULLATA_HARDENED_SUFFIX}")
+
+    # Find most recent hardened build to use as template - match both resolved and raw suffix
     local latestHardened=$(find "${appDir}" -maxdepth 1 -type d \
-        -regex ".*-${NULLATA_HARDENED_SUFFIX}" | sort -V | tail -n1)
+        \( -regex ".*-${NULLATA_HARDENED_SUFFIX}" -o -regex ".*-${resolvedSuffix}" \) | sort -V | tail -n1)
 
     if [[ -z "${latestHardened}" ]]; then
         logWarning "No previous hardened build found for ${appDir}"
@@ -330,12 +370,12 @@ function createHardenedBuild {
 
     logMessage "Using template from: ${latestHardened}"
 
-    local hardenedVersion="${standardVersion}-${NULLATA_HARDENED_SUFFIX}"
+    local hardenedVersion
+    hardenedVersion=$(resolvePhaseLabel "${appName}" "${standardVersion}-${NULLATA_HARDENED_SUFFIX}")
     local hardenedBuildDir="${appDir}/${hardenedVersion}"
 
     if [[ -d "${hardenedBuildDir}" ]]; then
-        logWarning "Hardened build directory already exists: ${hardenedBuildDir}"
-        return 1
+        logMessage "Hardened build directory already exists, refreshing: ${hardenedBuildDir}"
     fi
 
     logMessage "Creating hardened build directory: ${hardenedBuildDir}"
@@ -393,6 +433,8 @@ function createHardenedBuild {
     # reset status to untested and update build date
     updateJsonProperty "status" "untested" "${versionFile}"
     updateJsonProperty "build_date" "${today}" "${versionFile}"
+
+    updateLicenseYear "${hardenedBuildDir}"
 
     logMessage "Hardened build directory created: ${hardenedBuildDir}"
 
