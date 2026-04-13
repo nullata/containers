@@ -120,5 +120,42 @@ function retryCommand {
     return 1
 }
 
+function updateLicenseYear {
+    local targetDir="$1"
+    local currentYear
+    currentYear=$(date +%Y)
+
+    if [[ -z "${targetDir}" ]]; then
+        logError "${FUNCNAME[0]}: Target directory must be provided"
+    fi
+    if ! [[ -d "${targetDir}" ]]; then
+        logError "${FUNCNAME[0]}: Directory not found: ${targetDir}"
+    fi
+
+    logMessage "Updating license year to ${currentYear} in: ${targetDir}"
+
+    local count=0
+    while IFS= read -r -d '' file; do
+        local changed=false
+
+        if grep -q "Modified by nullata [0-9]\{4\}" "${file}" 2>/dev/null; then
+            sed -i "s/Modified by nullata [0-9]\{4\}/Modified by nullata ${currentYear}/" "${file}"
+            changed=true
+        fi
+
+        if grep -q "Copyright (c) [0-9]\{4\} NullSCA" "${file}" 2>/dev/null; then
+            sed -i "s/Copyright (c) [0-9]\{4\} NullSCA/Copyright (c) ${currentYear} NullSCA/" "${file}"
+            changed=true
+        fi
+
+        if ${changed}; then
+            count=$((count + 1))
+        fi
+    done < <(find "${targetDir}" -type f -name "*.sh" -print0)
+
+    logMessage "License year updated in ${count} file(s)"
+}
+
 export -f mkDirs
 export -f rmDirs
+export -f updateLicenseYear

@@ -278,6 +278,8 @@ function updateNewBuildFiles {
     else
         logWarning "  VERSION file not found: ${versionFile}"
     fi
+
+    updateLicenseYear "${newBuildDir}"
 }
 
 function updateMasterVersionFile {
@@ -393,6 +395,8 @@ function createHardenedBuild {
     # reset status to untested and update build date
     updateJsonProperty "status" "untested" "${versionFile}"
     updateJsonProperty "build_date" "${today}" "${versionFile}"
+
+    updateLicenseYear "${hardenedBuildDir}"
 
     logMessage "Hardened build directory created: ${hardenedBuildDir}"
 
