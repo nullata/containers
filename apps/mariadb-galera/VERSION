@@ -15,7 +15,7 @@
     {
       "name": "galera",
       "primary": false,
-      "latest_version": "26.4.25",
+      "latest_version": "26.4.27",
       "version_source": {
         "type": "github_tags",
         "url": "https://api.github.com/repositories/18951393/tags",
