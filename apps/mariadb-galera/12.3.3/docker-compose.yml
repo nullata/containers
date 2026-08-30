@@ -1,0 +1,134 @@
+---
+# Copyright (c) 2025 NullSCA (nullata)
+# Licensed under the Elastic License 2.0
+# See LICENSE-SCRIPTS for details
+
+services:
+    ############################################
+    # Single node test
+    ############################################
+    mariadb-single:
+        profiles: ["test-single"]
+        image: nullata/mariadb-galera:${VERSION}
+        ports:
+            - "10912:3306"
+        volumes:
+            - "${NULLATA_TEST_BUILD_DIR}/nullata-galera-test:/nullata/mariadb"
+        environment:
+            - MARIADB_GALERA_CLUSTER_ADDRESS=gcomm://
+            - MARIADB_GALERA_CLUSTER_BOOTSTRAP=yes
+            - MARIADB_GALERA_CLUSTER_NAME=test-single
+            - MARIADB_GALERA_MARIABACKUP_USER=backup
+            - MARIADB_GALERA_MARIABACKUP_PASSWORD=testpass
+            - MARIADB_USER=testuser
+            - MARIADB_PASSWORD=testpass
+            - MARIADB_ROOT_PASSWORD=testroot
+            - MARIADB_DATABASE=testdb
+        healthcheck:
+            test: ["CMD", "/opt/nullata/scripts/mariadb-galera/healthcheck.sh"]
+            interval: 15s
+            timeout: 5s
+            retries: 6
+
+    ############################################
+    # Explicit full mesh
+    ############################################
+    mariadb-node1:
+        profiles: ["test-cluster"]
+        image: nullata/mariadb-galera:${VERSION}
+        ports:
+            - "10913:3306"
+        volumes:
+            - "${NULLATA_TEST_BUILD_DIR}/nullata-galera-test-node1:/nullata/mariadb"
+            - "${NULLATA_TEST_BUILD_DIR}/backup/nullata-galera-test:/backup"
+        environment:
+            - MARIADB_GALERA_CLUSTER_ADDRESS=gcomm://mariadb-node1,mariadb-node2,mariadb-node3
+            - MARIADB_GALERA_CLUSTER_BOOTSTRAP=yes
+            - MARIADB_GALERA_CLUSTER_NAME=test-cluster
+            - MARIADB_GALERA_MARIABACKUP_USER=backup
+            - MARIADB_GALERA_MARIABACKUP_PASSWORD=testpass
+            - MARIADB_ROOT_PASSWORD=testroot
+            # force a re-bootstrap after a total outage:
+            - MARIADB_GALERA_FORCE_SAFETOBOOTSTRAP=yes
+        healthcheck:
+            test: ["CMD", "/opt/nullata/scripts/mariadb-galera/healthcheck.sh"]
+
+    mariadb-node2:
+        profiles: ["test-cluster"]
+        image: nullata/mariadb-galera:${VERSION}
+        ports:
+            - "10914:3306"
+        volumes:
+            - "${NULLATA_TEST_BUILD_DIR}/nullata-galera-test-node2:/nullata/mariadb"
+        environment:
+            - MARIADB_GALERA_CLUSTER_ADDRESS=gcomm://mariadb-node1,mariadb-node2,mariadb-node3
+            - MARIADB_GALERA_CLUSTER_NAME=test-cluster
+            - MARIADB_GALERA_MARIABACKUP_USER=backup
+            - MARIADB_GALERA_MARIABACKUP_PASSWORD=testpass
+            - MARIADB_ROOT_PASSWORD=testroot
+        depends_on:
+            mariadb-node1:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD", "/opt/nullata/scripts/mariadb-galera/healthcheck.sh"]
+
+    mariadb-node3:
+        profiles: ["test-cluster"]
+        image: nullata/mariadb-galera:${VERSION}
+        ports:
+            - "10915:3306"
+        volumes:
+            - "${NULLATA_TEST_BUILD_DIR}/nullata-galera-test-node3:/nullata/mariadb"
+        environment:
+            - MARIADB_GALERA_CLUSTER_ADDRESS=gcomm://mariadb-node1,mariadb-node2,mariadb-node3
+            - MARIADB_GALERA_CLUSTER_NAME=test-cluster
+            - MARIADB_GALERA_MARIABACKUP_USER=backup
+            - MARIADB_GALERA_MARIABACKUP_PASSWORD=testpass
+            - MARIADB_ROOT_PASSWORD=testroot
+        depends_on:
+            mariadb-node1:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD", "/opt/nullata/scripts/mariadb-galera/healthcheck.sh"]
+
+    ############################################
+    # Primary-join (star topology)
+    ############################################
+    mariadb-seed:
+        profiles: ["test-seed"]
+        image: nullata/mariadb-galera:${VERSION}
+        ports:
+          - "10916:3306"
+        volumes:
+            - "${NULLATA_TEST_BUILD_DIR}/nullata-galera-test-seed0:/nullata/mariadb"
+            - "${NULLATA_TEST_BUILD_DIR}/backup/nullata-galera-test:/backup"
+        environment:
+            - MARIADB_GALERA_CLUSTER_ADDRESS=gcomm://
+            - MARIADB_GALERA_CLUSTER_BOOTSTRAP=yes
+            - MARIADB_GALERA_CLUSTER_NAME=test-seed
+            - MARIADB_GALERA_MARIABACKUP_USER=backup
+            - MARIADB_GALERA_MARIABACKUP_PASSWORD=testpass
+            - MARIADB_ROOT_PASSWORD=testroot
+            # force a re-bootstrap after a total outage:
+            - MARIADB_GALERA_FORCE_SAFETOBOOTSTRAP=yes
+        healthcheck:
+            test: ["CMD", "/opt/nullata/scripts/mariadb-galera/healthcheck.sh"]
+
+    mariadb-join1:
+        profiles: ["test-seed"]
+        image: nullata/mariadb-galera:${VERSION}
+        ports:
+            - "10917:3306"
+        volumes:
+            - "${NULLATA_TEST_BUILD_DIR}/nullata-galera-test-join1:/nullata/mariadb"
+        environment:
+            - MARIADB_GALERA_CLUSTER_ADDRESS=gcomm://mariadb-seed
+            - MARIADB_GALERA_CLUSTER_NAME=test-seed
+            - MARIADB_GALERA_MARIABACKUP_USER=backup
+            - MARIADB_GALERA_MARIABACKUP_PASSWORD=testpass
+            - MARIADB_ROOT_PASSWORD=testroot
+        depends_on:
+            mariadb-seed:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD", "/opt/nullata/scripts/mariadb-galera/healthcheck.sh"]
