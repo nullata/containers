@@ -1,0 +1,6 @@
+{
+  "build_version": "13.0.2",
+  "galera": "26.4.27",
+  "build_date": "2026-09-21",
+  "status": "tested"
+}

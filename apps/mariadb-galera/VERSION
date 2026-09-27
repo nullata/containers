@@ -4,7 +4,7 @@
     {
       "name": "mariadb",
       "primary": true,
-      "latest_version": "12.3.3",
+      "latest_version": "13.0.2",
       "version_source": {
         "type": "github_latest_release",
         "url": "https://api.github.com/repos/MariaDB/server/releases/latest",
