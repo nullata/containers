@@ -503,9 +503,16 @@ function cleanupOldBuilds {
         grep -v "\-${NULLATA_HARDENED_SUFFIX}" | \
         sort -V))
 
-    # find all hardened version directories
+    # resolve the hardened suffix for this app (may strip phase labels)
+    local phaseAppName
+    phaseAppName=$(jq -r '.app_name // empty' "${appDir}/VERSION" 2>/dev/null)
+    local resolvedSuffix
+    resolvedSuffix=$(resolvePhaseLabel "${phaseAppName:-${appName}}" "${NULLATA_HARDENED_SUFFIX}")
+
+    # find all hardened version directories - match both resolved and raw suffix
     local hardenedBuilds=($(find "${appDir}" -maxdepth 1 -type d \
-        -regex ".*-${NULLATA_HARDENED_SUFFIX}" | \
+        \( -regex ".*/[0-9]+\.[0-9]+\.[0-9]+\(-[0-9]+\)?-${NULLATA_HARDENED_SUFFIX}" \
+        -o -regex ".*/[0-9]+\.[0-9]+\.[0-9]+\(-[0-9]+\)?-${resolvedSuffix}" \) | \
         sort -V))
 
     # cleanup standard builds
@@ -547,6 +554,52 @@ function cleanupOldBuilds {
     else
         logMessage "Hardened builds: ${#hardenedBuilds[@]}/${maxKeep} - no cleanup needed"
     fi
+
+    pruneLocalImages "${appDir}"
+}
+
+function pruneLocalImages {
+    # remove local image tags that no longer have a matching build directory
+    local appDir="$1"
+    local appName=$(basename "${appDir}")
+    local image="nullata/${appName}"
+
+    if ! commandExists docker || ! dockerActive; then
+        logWarning "Docker not available - skipping local image pruning for ${image}"
+        return 0
+    fi
+
+    local tags
+    tags=$(docker image ls "${image}" --format '{{.Tag}}' 2>/dev/null | sort -uV)
+
+    local tag=""
+    while IFS= read -r tag; do
+        [[ -z "${tag}" || "${tag}" == "<none>" || "${tag}" == "latest" ]] && continue
+
+        if ! [[ -d "${appDir}/${tag}" ]]; then
+            logMessage "  Removing local image without build dir: ${image}:${tag}"
+            docker image rm "${image}:${tag}" >/dev/null || \
+                logWarning "  Could not remove ${image}:${tag} (in use by a container?)"
+        fi
+    done <<< "${tags}"
+}
+
+function pruneDockerBuildArtifacts {
+    # builds always run with --no-cache, so dangling layers and build cache are dead weight.
+    # note: these prunes are host-wide, not scoped to nullata images
+    if [[ "${NULLATA_PRUNE_BUILD_CACHE}" != "true" ]]; then
+        logMessage "NULLATA_PRUNE_BUILD_CACHE=${NULLATA_PRUNE_BUILD_CACHE} - skipping docker build artifact pruning"
+        return 0
+    fi
+
+    if ! commandExists docker || ! dockerActive; then
+        logWarning "Docker not available - skipping build artifact pruning"
+        return 0
+    fi
+
+    logMessage "Pruning dangling images and build cache..."
+    docker image prune -f >/dev/null || logWarning "docker image prune failed"
+    docker builder prune -f >/dev/null || logWarning "docker builder prune failed"
 }
 
 function cleanupAllApps {
@@ -560,6 +613,8 @@ function cleanupAllApps {
             logBreak
         fi
     done
+
+    pruneDockerBuildArtifacts
 
     logMessage "Cleanup complete for all apps"
 }
